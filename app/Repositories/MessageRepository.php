@@ -36,6 +36,7 @@ class MessageRepository
     }
 
     public function getCachedMessages($id) {
+
         $message = Redis::get("message_sent:{$id}");
         return $message ? json_decode($message, true) : null;
     }

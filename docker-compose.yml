@@ -1,32 +1,121 @@
 services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: insider-app
+    container_name: insider_app
+    restart: unless-stopped
+    tty: true
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=local
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=insider_db
+      - DB_USERNAME=insider_user
+      - DB_PASSWORD=insider_password
+      - REDIS_HOST=redis
+      - REDIS_CLIENT=phpredis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - insider-network
+
+  queue:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: insider_queue
+    restart: unless-stopped
+    command: "php artisan queue:work --tries=3"
+    working_dir: /var/www
+    volumes:
+      - ./:/var/www
+    environment:
+      - APP_ENV=local
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=insider_db
+      - DB_USERNAME=insider_user
+      - DB_PASSWORD=insider_password
+      - REDIS_HOST=redis
+      - REDIS_CLIENT=phpredis
+      - REDIS_PORT=6379
+      - QUEUE_CONNECTION=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - insider-network
+
   mysql:
     image: mysql:8.0
-    container_name: insider-mysql
-    restart: unless-stopped
+    container_name: insider_mysql
+    restart: always
+    ports:
+      - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: insider_db
       MYSQL_USER: insider_user
       MYSQL_PASSWORD: insider_password
-    ports:
-      - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-  
+    networks:
+      - insider-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:alpine
     container_name: insider_redis
     restart: always
     ports:
       - "6379:6379"
+    networks:
+      - insider-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
       
-  adminer:
-    image: adminer:latest
-    container_name: insider_adminer
-    restart: always
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: insider_pma
+    links:
+      - mysql:db
+    depends_on:
+      - mysql
     ports:
-      - "8080:8080"
+      - "8080:80"
+    environment:
+      PMA_HOST: mysql
+      PMA_USER: insider_user
+      PMA_PASSWORD: insider_password
+    networks:
+      - insider-network
 
+networks:
+  insider-network:
+    driver: bridge
 
 volumes:
   db_data:

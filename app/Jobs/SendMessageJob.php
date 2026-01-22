@@ -38,7 +38,7 @@ class SendMessageJob implements ShouldQueue
             return;
         }
 
-        $response = Http::post('https://webhook.site/269c75df-165e-406a-8b5b-a24420e67f69', [
+        $response = Http::post('https://webhook.site/bc1eebfb-8101-4e78-b8f3-4c64660d7478', [
             'to' => $this->message->phone,
             'content' => $this->message->content,
         ]);
