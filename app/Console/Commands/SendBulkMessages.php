@@ -21,13 +21,17 @@ class SendBulkMessages extends Command
 
         $batchSize = 2;
         $intervalSeconds = 5;
-
-        foreach ($messages as $index=>$message) {
-            $delayInSeconds = floor($index / $batchSize) * $intervalSeconds;
-
-            SendMessageJob::dispatch($message)->delay($delayInSeconds);
-
-            $this->warn('Dispatched message ID: ' . $message->id . ' with delay of ' . $delayInSeconds . ' seconds');
+        $processedCount = 0;
+        
+        foreach ($messages as $message) {
+            $delayInSeconds = floor($processedCount / $batchSize) * $intervalSeconds;
+            SendMessageJob::dispatch($message)
+                ->delay(now()->addSeconds($delayInSeconds));
+            
+            $message->status = 'queued';
+            $message->save();
+            $this->info("Dispatched message ID: {$message->id} with delay of {$delayInSeconds} seconds");
+            $processedCount++;
         }
 
         $this->info('All messages have been dispatched for sending.');

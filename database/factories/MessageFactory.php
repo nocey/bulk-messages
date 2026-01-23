@@ -15,7 +15,7 @@ class MessageFactory extends Factory
         return [
             'phone' => fake()->phoneNumber(),
             'content' => fake()->text(Message::MAX_CONTENT_LENGTH),
-            'status' => fake()->randomElement(['pending', 'sent', 'failed']),
+            'status' => fake()->randomElement(['pending', 'sent', 'failed', 'queued']),
         ];
     }
 
